@@ -1,9 +1,9 @@
 import { Body, Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common'
-import { Prisma } from '@prisma/client'
 import { HashingService } from 'src/shared/services/hashing.service'
 import { PrismaService } from 'src/shared/services/prisma.service'
 import { TokenService } from 'src/shared/services/token.service'
 import { LoginDTO } from './auth.dto'
+import { isNotFoundPrismaError, isUniqueConstrainPrismaError } from 'src/shared/helpers'
 
 @Injectable()
 export class AuthService {
@@ -25,7 +25,7 @@ export class AuthService {
       })
       return user
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code == 'P2002') {
+      if (isUniqueConstrainPrismaError(error)) {
         throw new Error('Email already exists')
       }
       throw error
@@ -93,7 +93,7 @@ export class AuthService {
 
       return await this.generateTokens({ userId })
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      if (isNotFoundPrismaError(error)) {
         throw new UnprocessableEntityException('Refresh has been revoked or does not exist')
       } else {
         throw new UnauthorizedException()
