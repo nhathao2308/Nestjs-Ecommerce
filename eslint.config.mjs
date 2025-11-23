@@ -34,6 +34,7 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/only-throw-error': 'off',
       'prettier/prettier': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
     },
   },
 )

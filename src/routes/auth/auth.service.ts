@@ -100,4 +100,24 @@ export class AuthService {
       }
     }
   }
+
+  async Logout(refreshToken: string) {
+    try {
+      await this.tokenservice.verifyRefreshToken(refreshToken)
+
+      await this.prismaService.refreshToken.delete({
+        where: {
+          token: refreshToken,
+        },
+      })
+
+      return { message: 'Logout successful' }
+    } catch (error) {
+      if (isNotFoundPrismaError(error)) {
+        throw new UnprocessableEntityException('RefreshToken invalid')
+      } else {
+        throw new UnauthorizedException()
+      }
+    }
+  }
 }

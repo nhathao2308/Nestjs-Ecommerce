@@ -30,7 +30,6 @@ export class AuthenticationGuard implements CanActivate {
     const guards = authType.authTypes.map((type) => this.authTypeGuardMap[type])
     let error = new UnauthorizedException()
     if (authType.options.condition === 'and') {
-      console.log('hi')
       for (const guard of guards) {
         const canActivate = await Promise.resolve(guard.canActivate(context)).catch((err) => {
           error = err
