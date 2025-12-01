@@ -1,45 +1,523 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider = "postgresql"
+  url     = env("DATABASE_URL")
+}
+
+model Language {a
+  id        String   @id @default(uuid())
+  name      String
+  code      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdBy   User?   @relation("LanguageCreatedBy", fields: [createdById], references: [id])
+  createdById String?
+  updatedBy   User?   @relation("LanguageUpdatedBy", fields: [updatedById], references: [id])
+  updatedById String?
+  deletedById String?
+
+  userTransactions     UserTransaction[]
+  productTranslations  ProductTranslation[]
+  categoryTranslations CategoryTranslation[]
+  brandTranslations    BrandTranslation[]
+
+  @@map("languages")
 }
 
 model User {
-  id        Int             @id @default(autoincrement())
-  email     String          @unique
-  name      String
-  password  String
-  createAt  DateTime        @default(now())
-  updateAt  DateTime        @updatedAt
-  posts     Post[]          @relation("UserPosts")
-  tokens    RefreshToken[]  @relation("UserTokens")
+  id          String     @id @default(uuid())
+  email       String     @unique
+  name        String
+  password    String
+  phoneNumber String
+  avatar      String?
+  totpSecret  String?
+  status      UserStatus @default(ACTIVE)
+  roleId      String
+  deletedAt   DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  role        Role   @relation(fields: [roleId], references: [id])
+  createdBy   User?  @relation("UserCreatedBy", fields: [createdById], references: [id])
+  createdById String?
+  updatedBy   User?  @relation("UserUpdatedBy", fields: [updatedById], references: [id])
+  updatedById String?
+
+  usersCreated         User[]                @relation("UserCreatedBy")
+  usersUpdated         User[]                @relation("UserUpdatedBy")
+  userTransactions     UserTransaction[]
+  userTransactionsCreated UserTransaction[]  @relation("UserTransactionCreatedBy")
+  userTransactionsUpdated UserTransaction[]  @relation("UserTransactionUpdatedBy")
+  refreshTokens        RefreshToken[]
+  permissionsCreated   Permission[]          @relation("PermissionCreatedBy")
+  permissionsUpdated   Permission[]          @relation("PermissionUpdatedBy")
+  rolesCreated         Role[]                @relation("RoleCreatedBy")
+  rolesUpdated         Role[]                @relation("RoleUpdatedBy")
+  languagesCreated     Language[]            @relation("LanguageCreatedBy")
+  languagesUpdated     Language[]            @relation("LanguageUpdatedBy")
+  productsCreated      Product[]             @relation("ProductCreatedBy")
+  productsUpdated      Product[]             @relation("ProductUpdatedBy")
+  productTranslationsCreated ProductTranslation[] @relation("ProductTranslationCreatedBy")
+  productTranslationsUpdated ProductTranslation[] @relation("ProductTranslationUpdatedBy")
+  categoriesCreated    Category[]            @relation("CategoryCreatedBy")
+  categoriesUpdated    Category[]            @relation("CategoryUpdatedBy")
+  categoryTranslationsCreated CategoryTranslation[] @relation("CategoryTranslationCreatedBy")
+  categoryTranslationsUpdated CategoryTranslation[] @relation("CategoryTranslationUpdatedBy")
+  brandsCreated        Brand[]               @relation("BrandCreatedBy")
+  brandsUpdated        Brand[]               @relation("BrandUpdatedBy")
+  brandTranslationsCreated BrandTranslation[] @relation("BrandTranslationCreatedBy")
+  brandTranslationsUpdated BrandTranslation[] @relation("BrandTranslationUpdatedBy")
+  variantsCreated      Variant[]             @relation("VariantCreatedBy")
+  variantsUpdated      Variant[]             @relation("VariantUpdatedBy")
+  variantOptionsCreated VariantOption[]      @relation("VariantOptionCreatedBy")
+  variantOptionsUpdated VariantOption[]      @relation("VariantOptionUpdatedBy")
+  skusCreated          SKU[]                 @relation("SKUCreatedBy")
+  skusUpdated          SKU[]                 @relation("SKUUpdatedBy")
+  cartItems            CartItem[]
+  orders               Order[]
+  ordersCreated        Order[]               @relation("OrderCreatedBy")
+  ordersUpdated        Order[]               @relation("OrderUpdatedBy")
+  reviews              Review[]
+  messagesSent         Message[]             @relation("MessageFrom")
+  messagesReceived     Message[]             @relation("MessageTo")
+
+  @@map("users")
 }
 
-model Post {
-  id        Int       @id @default(autoincrement())
-  title     String
-  content   String
-  authorId  Int
-  createAt  DateTime  @default(now())
-  updateAt  DateTime  @updatedAt
+model UserTransaction {
+  id          String    @id @default(uuid())
+  userId      String
+  languageId  String
+  address     String?
+  description String?
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  author    User      @relation("UserPosts", fields: [authorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user        User     @relation(fields: [userId], references: [id])
+  language    Language @relation(fields: [languageId], references: [id])
+  createdBy   User     @relation("UserTransactionCreatedBy", fields: [createdById], references: [id])
+  createdById String
+  updatedBy   User     @relation("UserTransactionUpdatedBy", fields: [updatedById], references: [id])
+  updatedById String
+
+  @@map("user_transactions")
+}
+
+model VerificationCode {
+  id        String                 @id @default(uuid())
+  email     String
+  code      String
+  type      VerificationCodeType
+  expiresAt DateTime
+  createdAt DateTime               @default(now())
+
+  @@index([email, code, type])
+  @@index([expiresAt])
+  @@map("verification_codes")
+}
+
+model Permission {
+  id          String     @id @default(uuid())
+  name        String
+  description String
+  path        String
+  method      HTTPMethod
+  deletedAt   DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  createdBy   User   @relation("PermissionCreatedBy", fields: [createdById], references: [id])
+  createdById String
+  updatedBy   User   @relation("PermissionUpdatedBy", fields: [updatedById], references: [id])
+  updatedById String
+
+  roles PermissionsRoles[]
+
+  @@map("permissions")
 }
 
 model RefreshToken {
-  token     String    @unique
-  userId    Int
+  token     String   @unique
+  userId    String
   expiredAt DateTime
-  createAt  DateTime  @default(now())
+  createdAt DateTime @default(now())
 
-  user      User      @relation("UserTokens", fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("refresh_tokens")
+}
+
+model Role {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  description String
+  isActive    Boolean   @default(true)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  createdBy   User?   @relation("RoleCreatedBy", fields: [createdById], references: [id])
+  createdById String?
+  updatedBy   User?   @relation("RoleUpdatedBy", fields: [updatedById], references: [id])
+  updatedById String?
+
+  users       User[]
+  permissions PermissionsRoles[]
+
+  @@map("roles")
+}
+
+model Product {
+  id            String    @id @default(uuid())
+  base_price    Float
+  virtual_price Float
+  brandId       String
+  images        String[]
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  brand       Brand    @relation(fields: [brandId], references: [id])
+  createdBy   User?    @relation("ProductCreatedBy", fields: [createdById], references: [id])
+  createdById String?
+  updatedBy   User?    @relation("ProductUpdatedBy", fields: [updatedById], references: [id])
+  updatedById String?
+
+  translations ProductTranslation[]
+  categories   ProductsCategories[]
+  variants     Variant[]
+  skus         SKU[]
+  reviews      Review[]
+
+  @@map("products")
+}
+
+model ProductTranslation {
+  id          String    @id @default(uuid())
+  productId   String
+  languageId  String
+  name        String
+  description String
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  product     Product  @relation(fields: [productId], references: [id])
+  language    Language @relation(fields: [languageId], references: [id])
+  createdBy   User?    @relation("ProductTranslationCreatedBy", fields: [createdById], references: [id])
+  createdById String?
+  updatedBy   User?    @relation("ProductTranslationUpdatedBy", fields: [updatedById], references: [id])
+  updatedById String?
+
+  @@map("product_translations")
+}
+
+model Category {
+  id                 String    @id @default(uuid())
+  parentCategoryId   String?
+  deletedAt          DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  parentCategory  Category?  @relation("CategoryHierarchy", fields: [parentCategoryId], references: [id])
+  subCategories   Category[] @relation("CategoryHierarchy")
+  createdBy       User?      @relation("CategoryCreatedBy", fields: [createdById], references: [id])
+  createdById     String?
+  updatedBy       User?      @relation("CategoryUpdatedBy", fields: [updatedById], references: [id])
+  updatedById     String?
+
+  translations CategoryTranslation[]
+  products     ProductsCategories[]
+
+  @@map("categories")
+}
+
+model CategoryTranslation {
+  id          String    @id @default(uuid())
+  categoryId  String
+  languageId  String
+  name        String
+  description String
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  category    Category @relation(fields: [categoryId], references: [id])
+  language    Language @relation(fields: [languageId], references: [id])
+  createdBy   User?    @relation("CategoryTranslationCreatedBy", fields: [createdById], references: [id])
+  createdById String?
+  updatedBy   User?    @relation("CategoryTranslationUpdatedBy", fields: [updatedById], references: [id])
+  updatedById String?
+
+  @@map("category_translations")
+}
+
+model Brand {
+  id          String    @id @default(uuid())
+  logo        String
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  createdBy   User?   @relation("BrandCreatedBy", fields: [createdById], references: [id])
+  createdById String?
+  updatedBy   User?   @relation("BrandUpdatedBy", fields: [updatedById], references: [id])
+  updatedById String?
+
+  translations BrandTranslation[]
+  products     Product[]
+
+  @@map("brands")
+}
+
+model BrandTranslation {
+  id          String    @id @default(uuid())
+  brandId     String
+  languageId  String
+  name        String
+  description String
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  brand       Brand    @relation(fields: [brandId], references: [id])
+  language    Language @relation(fields: [languageId], references: [id])
+  createdBy   User?    @relation("BrandTranslationCreatedBy", fields: [createdById], references: [id])
+  createdById String?
+  updatedBy   User?    @relation("BrandTranslationUpdatedBy", fields: [updatedById], references: [id])
+  updatedById String?
+
+  @@map("brand_translations")
+}
+
+model Variant {
+  id          String    @id @default(uuid())
+  name        String
+  productId   String
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  product     Product @relation(fields: [productId], references: [id])
+  createdBy   User?   @relation("VariantCreatedBy", fields: [createdById], references: [id])
+  createdById String?
+  updatedBy   User?   @relation("VariantUpdatedBy", fields: [updatedById], references: [id])
+  updatedById String?
+
+  options VariantOption[]
+
+  @@map("variants")
+}
+
+model VariantOption {
+  id          String    @id @default(uuid())
+  value       String
+  variantId   String
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  variant     Variant @relation(fields: [variantId], references: [id])
+  createdBy   User?   @relation("VariantOptionCreatedBy", fields: [createdById], references: [id])
+  createdById String?
+  updatedBy   User?   @relation("VariantOptionUpdatedBy", fields: [updatedById], references: [id])
+  updatedById String?
+
+  skus SkusVariantOptions[]
+
+  @@map("variant_options")
+}
+
+model SKU {
+  id          String    @id @default(uuid())
+  value       String
+  price       Float
+  stock       Int
+  images      String[]
+  productId   String
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  product     Product @relation(fields: [productId], references: [id])
+  createdBy   User?   @relation("SKUCreatedBy", fields: [createdById], references: [id])
+  createdById String?
+  updatedBy   User?   @relation("SKUUpdatedBy", fields: [updatedById], references: [id])
+  updatedById String?
+
+  cartItems        CartItem[]
+  variantOptions   SkusVariantOptions[]
+  productSnapshots ProductSKUSnapshot[]
+
+  @@map("skus")
+}
+
+model CartItem {
+  id        Int      @id @default(autoincrement())
+  quantity  Int
+  skuId     String
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sku  SKU  @relation(fields: [skuId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("cart_items")
+}
+
+model ProductSKUSnapshot {
+  id          Int      @id @default(autoincrement())
+  productName String
+  price       Float
+  images      String[]
+  skuValue    String
+  skuId       String
+  orderId     String
+  createdAt   DateTime @default(now())
+
+  sku   SKU   @relation(fields: [skuId], references: [id])
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@map("product_sku_snapshots")
+}
+
+model Order {
+  id          String      @id @default(uuid())
+  userId      String
+  status      OrderStatus
+  deletedAt   DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  user        User    @relation(fields: [userId], references: [id])
+  createdBy   User?   @relation("OrderCreatedBy", fields: [createdById], references: [id])
+  createdById String?
+  updatedBy   User?   @relation("OrderUpdatedBy", fields: [updatedById], references: [id])
+  updatedById String?
+
+  productSnapshots ProductSKUSnapshot[]
+
+  @@map("orders")
+}
+
+model Review {
+  id        String    @id @default(uuid())
+  content   String
+  rating    Int
+  productId String
+  userId    String
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  product Product @relation(fields: [productId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@map("reviews")
+}
+
+model PaymentTransaction {
+  id                 String   @id @default(uuid())
+  gateway            String
+  transactionDate    DateTime @default(now())
+  accountNumber      String
+  subAccount         String?
+  amountIn           Int      @default(0)
+  amountOut          Int      @default(0)
+  accumulated        Int      @default(0)
+  code               String?
+  transactionContent String?
+  referenceNumber    String?
+  body               String?
+  createdAt          DateTime @default(now())
+
+  @@map("payment_transactions")
+}
+
+model Message {
+  id         String    @id @default(uuid())
+  fromUserId String
+  toUserId   String
+  content    String
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  fromUser User @relation("MessageFrom", fields: [fromUserId], references: [id])
+  toUser   User @relation("MessageTo", fields: [toUserId], references: [id])
+
+  @@map("messages")
+}
+
+// Join tables for many-to-many relationships
+model ProductsCategories {
+  productId  String
+  categoryId String
+
+  product  Product  @relation(fields: [productId], references: [id])
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@id([productId, categoryId])
+  @@map("products_categories")
+}
+
+model PermissionsRoles {
+  permissionId String
+  roleId       String
+
+  permission Permission @relation(fields: [permissionId], references: [id])
+  role       Role       @relation(fields: [roleId], references: [id])
+
+  @@id([permissionId, roleId])
+  @@map("permissions_roles")
+}
+
+model SkusVariantOptions {
+  skuId           String
+  variantOptionId String
+
+  sku           SKU           @relation(fields: [skuId], references: [id])
+  variantOption VariantOption @relation(fields: [variantOptionId], references: [id])
+
+  @@id([skuId, variantOptionId])
+  @@map("skus_variant_options")
+}
+
+// Enums
+enum OrderStatus {
+  PENDING_CONFIRMATION
+  PENDING_PICKUP
+  PENDING_DELIVERY
+  DELIVERED
+  RETURNED
+  CANCELLED
+}
+
+enum VerificationCodeType {
+  REGISTER
+  FORGOT_PASSWORD
+}
+
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+}
+
+enum HTTPMethod {
+  GET
+  POST
+  PUT
+  DELETE
+  PATCH
+  OPTIONS
+  HEAD
 }

@@ -1,48 +1,40 @@
-import { plainToInstance } from 'class-transformer'
-import { IsString, validateSync } from 'class-validator'
+import { z } from 'zod'
 import fs from 'fs'
 import path from 'path'
 import { config } from 'dotenv'
+
 config({
   path: '.env',
 })
-//kiểm tra có file env chưa
 
+// Check if .env file exists
 if (!fs.existsSync(path.resolve('.env'))) {
   console.log('No .env file found, creating a new one...')
   process.exit(1)
 }
 
-class ConfigSchema {
-  @IsString()
-  DATABASE_URL: string
-  @IsString()
-  ACCESS_TOKEN_SECRET: string
-  @IsString()
-  ACCESS_TOKEN_EXPIRES_IN: string
-  @IsString()
-  REFRESH_TOKEN_SECRET: string
-  @IsString()
-  REFRESH_TOKEN_EXPIRES_IN: string
-  @IsString()
-  SECRET_API_KEY: string
+// Define the schema using Zod
+const configSchema = z.object({
+  DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
+  ACCESS_TOKEN_SECRET: z.string().min(1, 'ACCESS_TOKEN_SECRET is required'),
+  ACCESS_TOKEN_EXPIRES_IN: z.string().min(1, 'ACCESS_TOKEN_EXPIRES_IN is required'),
+  REFRESH_TOKEN_SECRET: z.string().min(1, 'REFRESH_TOKEN_SECRET is required'),
+  REFRESH_TOKEN_EXPIRES_IN: z.string().min(1, 'REFRESH_TOKEN_EXPIRES_IN is required'),
+  SECRET_API_KEY: z.string().min(1, 'SECRET_API_KEY is required'),
+})
+
+// Validate and parse the environment variables
+const parseResult = configSchema.safeParse(process.env)
+
+if (!parseResult.success) {
+  console.log('❌ Invalid environment variables:')
+  console.error(parseResult.error)
+  process.exit(1)
 }
 
-const configServer = plainToInstance(ConfigSchema, process.env)
+const envConfig = parseResult.data
 
-const e = validateSync(configServer)
-
-if (e.length > 0) {
-  console.error('Configuration validation failed:', e)
-  const errors = e.map((eItem) => {
-    return {
-      property: eItem.property,
-      constraints: eItem.constraints,
-      value: eItem.value,
-    }
-  })
-  throw errors
-}
-
-const envConfig = configServer
 export default envConfig
+
+// Type export for TypeScript
+export type EnvConfig = z.infer<typeof configSchema>
