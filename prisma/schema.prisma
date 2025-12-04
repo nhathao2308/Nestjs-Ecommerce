@@ -10,7 +10,7 @@ datasource db {
   url     = env("DATABASE_URL")
 }
 
-model Language {a
+model Language {
   id        String   @id @default(uuid())
   name      String
   code      String   @unique
@@ -38,7 +38,7 @@ model User {
   password    String
   phoneNumber String
   avatar      String?
-  totpSecret  String?
+  totpSecret  String?    @unique
   status      UserStatus @default(ACTIVE)
   roleId      String
   deletedAt   DateTime?

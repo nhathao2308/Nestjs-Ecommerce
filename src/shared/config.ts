@@ -21,6 +21,10 @@ const configSchema = z.object({
   REFRESH_TOKEN_SECRET: z.string().min(1, 'REFRESH_TOKEN_SECRET is required'),
   REFRESH_TOKEN_EXPIRES_IN: z.string().min(1, 'REFRESH_TOKEN_EXPIRES_IN is required'),
   SECRET_API_KEY: z.string().min(1, 'SECRET_API_KEY is required'),
+  ADMIN_EMAIL: z.string().email('ADMIN_EMAIL must be a valid email'),
+  ADMIN_PASSWORD: z.string().min(6, 'ADMIN_PASSWORD must be at least 6 characters long'),
+  ADMIN_NAME: z.string().min(1, 'ADMIN_NAME is required'),
+  ADMIN_PHONE_NUMBER: z.string().min(1, 'ADMIN_PHONE_NUMBER is required'),
 })
 
 // Validate and parse the environment variables
