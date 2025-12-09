@@ -1,13 +1,10 @@
-import { Injectable } from '@nestjs/common'
-
-@Injectable()
-export class AuthService {}
 import { Body, Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common'
 import { HashingService } from 'src/shared/services/hashing.service'
 import { PrismaService } from 'src/shared/services/prisma.service'
 import { TokenService } from 'src/shared/services/token.service'
-import { LoginDTO } from './auth.dto'
 import { isNotFoundPrismaError, isUniqueConstrainPrismaError } from 'src/shared/helpers'
+import { RoleService } from './role.service'
+import { RegisterBodyDTO } from './auth.dto'
 
 @Injectable()
 export class AuthService {
@@ -15,16 +12,20 @@ export class AuthService {
     private readonly prismaService: PrismaService,
     private readonly hashingService: HashingService,
     private readonly tokenservice: TokenService,
+    private readonly roleService: RoleService,
   ) {}
 
-  async register(body: any) {
+  async register(body: RegisterBodyDTO) {
     try {
+      const roleId = await this.roleService.getRoleId()
       const hashedPassword = await this.hashingService.hash(body.password)
       const user = this.prismaService.user.create({
         data: {
-          name: body.name,
           email: body.email,
+          name: body.name,
           password: hashedPassword,
+          phoneNumber: body.phoneNumber,
+          roleId: roleId,
         },
       })
       return user
@@ -36,7 +37,7 @@ export class AuthService {
     }
   }
 
-  async generateTokens(payload: { userId: number }) {
+  async generateTokens(payload: { userId: string }) {
     const [accessToken, refreshToken] = await Promise.all([
       this.tokenservice.signAccessToken(payload),
       this.tokenservice.signRefreshToken(payload),
@@ -54,7 +55,7 @@ export class AuthService {
     return { accessToken, refreshToken }
   }
 
-  async Login(body: LoginDTO) {
+  async Login(body: any) {
     const user = await this.prismaService.user.findUnique({
       where: {
         email: body.email,
