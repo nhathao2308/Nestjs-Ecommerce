@@ -21,4 +21,7 @@ export const UserStatus = {
   BLOCKED: 'BLOCKED',
 } as const
 
-export type UserStatusType = (typeof UserStatus)[keyof typeof UserStatus]
+export const TypeOfVerificationCode = {
+  REGISTER: 'REGISTER',
+  FORGOT_PASSWORD: 'FORGOT_PASSWORD',
+} as const

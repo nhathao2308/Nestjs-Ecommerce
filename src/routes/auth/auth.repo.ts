@@ -1,5 +1,5 @@
 import { PrismaService } from 'src/shared/services/prisma.service'
-import { RegisterBodyType, UserType } from './auth.model'
+import { RegisterBodyType, UserType, VerificationCodeType } from './auth.model'
 import { Injectable } from '@nestjs/common'
 
 @Injectable()
@@ -21,5 +21,19 @@ export class AuthRepository {
       },
     })
     return user
+  }
+
+  async createOTPEntry(payload: Pick<VerificationCodeType, 'email' | 'code' | 'type' | 'expiresAt'>) {
+    return this.prismaService.verificationCode.upsert({
+      where: {
+        email: payload.email,
+      },
+      update: {
+        code: payload.code,
+        type: payload.type,
+        expiresAt: payload.expiresAt,
+      },
+      create: payload,
+    })
   }
 }

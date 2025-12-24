@@ -1,11 +1,14 @@
-import { Body, ConflictException, Injectable } from '@nestjs/common'
+import { Body, Injectable, UnprocessableEntityException } from '@nestjs/common'
 import { HashingService } from 'src/shared/services/hashing.service'
 import { TokenService } from 'src/shared/services/token.service'
-import { isUniqueConstrainPrismaError } from 'src/shared/helpers'
+import { generateOTP, isUniqueConstrainPrismaError } from 'src/shared/helpers'
 import { RoleService } from './role.service'
-import { RegisterBodyType } from './auth.model'
+import { RegisterBodyType, SendOTPBodyType } from './auth.model'
 import { AuthRepository } from './auth.repo'
-import { PrismaService } from 'src/shared/services/prisma.service'
+import { SharedUserRepository } from 'src/shared/repositories/shared-user.repository'
+import { addMilliseconds } from 'date-fns'
+import ms from 'ms'
+import envConfig from 'src/shared/config'
 @Injectable()
 export class AuthService {
   constructor(
@@ -13,22 +16,13 @@ export class AuthService {
     private readonly tokenservice: TokenService,
     private readonly roleService: RoleService,
     private readonly authRepository: AuthRepository,
-    private readonly prismaService: PrismaService,
+    private readonly sharedUserRepository: SharedUserRepository,
   ) {}
 
   async register(body: RegisterBodyType) {
     try {
       const roleId = await this.roleService.getRoleId()
       const hashedPassword = await this.hashingService.hash(body.password)
-      // const user = await this.prismaService.user.create({
-      //   data: {
-      //     email: body.email,
-      //     name: body.name,
-      //     password: hashedPassword,
-      //     phoneNumber: body.phoneNumber,
-      //     roleId: roleId,
-      //   },
-      // })
 
       const user = await this.authRepository.createUser({
         email: body.email,
@@ -41,10 +35,36 @@ export class AuthService {
       return user
     } catch (error) {
       if (isUniqueConstrainPrismaError(error)) {
-        throw new ConflictException('Email already exists')
+        throw new UnprocessableEntityException([
+          {
+            path: ['email'],
+            message: 'Email already exists',
+          },
+        ])
       }
       throw error
     }
+  }
+
+  async sendOTP(body: SendOTPBodyType) {
+    const user = await this.sharedUserRepository.findUnique({ email: body.email })
+    if (user) {
+      throw new UnprocessableEntityException([
+        {
+          path: ['email'],
+          message: 'Email already exists',
+        },
+      ])
+    }
+
+    const otp = generateOTP()
+    const verificationCode = await this.authRepository.createOTPEntry({
+      email: body.email,
+      code: otp,
+      type: body.type,
+      expiresAt: addMilliseconds(new Date(), ms(envConfig.OTP_EXPRIRES_IN)),
+    })
+    return verificationCode
   }
 
   // async generateTokens(payload: { userId: string }) {

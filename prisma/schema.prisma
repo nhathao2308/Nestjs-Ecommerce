@@ -114,7 +114,7 @@ model UserTransaction {
 
 model VerificationCode {
   id        String                 @id @default(uuid())
-  email     String
+  email     String @unique
   code      String
   type      VerificationCodeType
   expiresAt DateTime
