@@ -1,13 +1,13 @@
 import { PrismaService } from 'src/shared/services/prisma.service'
 import { RegisterBodyType, UserType, VerificationCodeType } from './auth.model'
 import { Injectable } from '@nestjs/common'
-
+import { TypeOfVerificationCodeType } from 'src/shared/constants/auth.constant'
 @Injectable()
 export class AuthRepository {
   constructor(private readonly prismaService: PrismaService) {}
 
   async createUser(
-    userData: Omit<RegisterBodyType, 'confirmPassword'> & Pick<UserType, 'roleId'>,
+    userData: Omit<RegisterBodyType, 'confirmPassword' | 'code'> & Pick<UserType, 'roleId'>,
   ): Promise<Omit<UserType, 'password' | 'totpSecret'>> {
     console.log('userData', userData)
 
@@ -35,5 +35,14 @@ export class AuthRepository {
       },
       create: payload,
     })
+  }
+
+  async getOTPEntryByEmail(
+    uniqueObject:
+      | { email: string }
+      | { id: string }
+      | { code: string; email: string; type: TypeOfVerificationCodeType },
+  ): Promise<VerificationCodeType | null> {
+    return this.prismaService.verificationCode.findUnique({ where: uniqueObject })
   }
 }

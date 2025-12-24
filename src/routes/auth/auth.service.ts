@@ -21,6 +21,17 @@ export class AuthService {
 
   async register(body: RegisterBodyType) {
     try {
+      const verificationCode = await this.authRepository.getOTPEntryByEmail({
+        email: body.email,
+        code: body.code,
+        type: 'REGISTER',
+      })
+      if (!verificationCode) {
+        throw new UnprocessableEntityException([{ path: ['code'], message: 'Invalid verification code' }])
+      } else if (verificationCode.expiresAt < new Date()) {
+        throw new UnprocessableEntityException([{ path: ['code'], message: 'Verification code has expired' }])
+      }
+
       const roleId = await this.roleService.getRoleId()
       const hashedPassword = await this.hashingService.hash(body.password)
 
